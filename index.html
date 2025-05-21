@@ -4,185 +4,146 @@
   <meta charset="UTF-8">
   <title>Caderno de Dívidas - SucessoCell</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-
-    #loginBox {
-      max-width: 300px;
-      margin: 100px auto;
-      background: white;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 10px;
-    }
-
-    #loginBox input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      font-size: 16px;
-    }
-
-    #loginBox button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    #app {
-      display: none;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-
-    th {
-      background: #333;
-      color: white;
-    }
-
-    td[contenteditable] {
-      background: #fff8dc;
-    }
-
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
+    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
+    table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    th { background: #444; color: white; }
+    td[contenteditable] { background: #fdfde3; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    #senha-container { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
 
-<div id="loginBox">
-  <h2>Digite a Senha</h2>
-  <input type="password" id="senha" placeholder="Senha">
+<div id="senha-container">
+  <h2>Digite a senha para acessar</h2>
+  <input type="password" id="senha" placeholder="Senha" />
   <button onclick="verificarSenha()">Entrar</button>
   <p id="erro" style="color:red;"></p>
 </div>
 
-<div id="app">
+<div id="conteudo" style="display:none;">
   <h1>Caderno de Dívidas - SucessoCell</h1>
-
-  <table id="dividasTable">
+  <table id="tabela">
     <thead>
       <tr>
         <th>Nome</th>
-        <th>Valor da Dívida (R$)</th>
-        <th>Valor Pago (R$)</th>
-        <th>Falta Pagar (R$)</th>
+        <th>Dívida (R$)</th>
+        <th>Pago (R$)</th>
+        <th>Falta (R$)</th>
         <th>Excluir</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
-
-  <button onclick="adicionarLinha()">Adicionar Dívida</button>
+  <button onclick="adicionarLinha()">Adicionar Linha</button>
 </div>
 
 <script>
-  const senhaCorreta = "030102";
+const senhaCorreta = "030102";
+const endpoint = "https://script.google.com/macros/s/AKfycbxt_8MZ7bCQkxi2HG-XzV33rCK5q-cHwmpM5_JKp-cgvSmqoc-aWxaYLHF8CQh-hAO8vg/exec";
 
-  function verificarSenha() {
-    const senha = document.getElementById("senha").value;
-    if (senha === senhaCorreta) {
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      carregarDados();
-    } else {
-      document.getElementById("erro").innerText = "Senha incorreta!";
-    }
+function verificarSenha() {
+  const senha = document.getElementById("senha").value;
+  if (senha === senhaCorreta) {
+    document.getElementById("senha-container").style.display = "none";
+    document.getElementById("conteudo").style.display = "block";
+    carregarDados();
+  } else {
+    document.getElementById("erro").innerText = "Senha incorreta";
   }
+}
 
-  const tabela = document.getElementById("dividasTable").querySelector("tbody");
+function criarLinha(nome = "", divida = "", pago = "") {
+  const tr = document.createElement("tr");
 
-  function salvarDados() {
-    const dados = [];
-    for (const row of tabela.rows) {
-      const nome = row.cells[0].innerText;
-      const divida = parseFloat(row.cells[1].innerText) || 0;
-      const pago = parseFloat(row.cells[2].innerText) || 0;
-      dados.push({ nome, divida, pago });
-    }
-    localStorage.setItem("cadernoDividas", JSON.stringify(dados));
-  }
+  const tdNome = document.createElement("td");
+  tdNome.contentEditable = true;
+  tdNome.innerText = nome;
 
-  function carregarDados() {
-    const dados = JSON.parse(localStorage.getItem("cadernoDividas")) || [];
-    for (const item of dados) {
-      const linha = criarLinha(item.nome, item.divida, item.pago);
-      tabela.appendChild(linha);
-    }
-  }
+  const tdDivida = document.createElement("td");
+  tdDivida.contentEditable = true;
+  tdDivida.innerText = divida;
 
-  function criarLinha(nome = "", divida = 0, pago = 0) {
-    const linha = document.createElement("tr");
+  const tdPago = document.createElement("td");
+  tdPago.contentEditable = true;
+  tdPago.innerText = pago;
 
-    const tdNome = document.createElement("td");
-    tdNome.contentEditable = true;
-    tdNome.innerText = nome;
+  const tdFalta = document.createElement("td");
+  tdFalta.innerText = calcularFalta(divida, pago);
 
-    const tdDivida = document.createElement("td");
-    tdDivida.contentEditable = true;
-    tdDivida.innerText = divida;
+  const tdExcluir = document.createElement("td");
+  const btn = document.createElement("button");
+  btn.innerText = "🗑️";
+  btn.onclick = () => {
+    tr.remove();
+    salvarDados();
+  };
+  tdExcluir.appendChild(btn);
 
-    const tdPago = document.createElement("td");
-    tdPago.contentEditable = true;
-    tdPago.innerText = pago;
+  tr.appendChild(tdNome);
+  tr.appendChild(tdDivida);
+  tr.appendChild(tdPago);
+  tr.appendChild(tdFalta);
+  tr.appendChild(tdExcluir);
 
-    const tdFalta = document.createElement("td");
-    tdFalta.innerText = (divida - pago).toFixed(2);
-
-    const tdExcluir = document.createElement("td");
-    const btnExcluir = document.createElement("button");
-    btnExcluir.innerText = "🗑️";
-    btnExcluir.onclick = () => {
-      linha.remove();
-      salvarDados();
-    };
-    tdExcluir.appendChild(btnExcluir);
-
-    linha.appendChild(tdNome);
-    linha.appendChild(tdDivida);
-    linha.appendChild(tdPago);
-    linha.appendChild(tdFalta);
-    linha.appendChild(tdExcluir);
-
-    linha.addEventListener("input", () => {
-      const divida = parseFloat(tdDivida.innerText) || 0;
-      const pago = parseFloat(tdPago.innerText) || 0;
-      tdFalta.innerText = (divida - pago).toFixed(2);
+  [tdNome, tdDivida, tdPago].forEach(cell => {
+    cell.addEventListener("input", () => {
+      tdFalta.innerText = calcularFalta(tdDivida.innerText, tdPago.innerText);
       salvarDados();
     });
+  });
 
-    return linha;
-  }
+  return tr;
+}
 
-  function adicionarLinha() {
-    const novaLinha = criarLinha();
-    tabela.appendChild(novaLinha);
-    salvarDados();
-  }
+function calcularFalta(divida, pago) {
+  const d = parseFloat(divida) || 0;
+  const p = parseFloat(pago) || 0;
+  return (d - p).toFixed(2);
+}
+
+function adicionarLinha() {
+  const tr = criarLinha();
+  document.querySelector("tbody").appendChild(tr);
+  salvarDados();
+}
+
+function salvarDados() {
+  const linhas = document.querySelectorAll("tbody tr");
+  const dados = [];
+  linhas.forEach(linha => {
+    const tds = linha.querySelectorAll("td");
+    dados.push({
+      nome: tds[0].innerText,
+      divida: tds[1].innerText,
+      pago: tds[2].innerText
+    });
+  });
+
+  fetch(endpoint, {
+    method: "POST",
+    body: JSON.stringify(dados),
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(r => r.text())
+  .then(r => console.log("Salvo online:", r))
+  .catch(e => alert("Erro ao salvar: " + e.message));
+}
+
+function carregarDados() {
+  fetch(endpoint)
+    .then(res => res.json())
+    .then(dados => {
+      const tbody = document.querySelector("tbody");
+      tbody.innerHTML = "";
+      dados.forEach(item => {
+        const tr = criarLinha(item.nome, item.divida, item.pago);
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err => console.error("Erro ao carregar:", err));
+}
 </script>
 
 </body>
