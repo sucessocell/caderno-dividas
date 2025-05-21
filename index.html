@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Caderno de Dívidas - SucessoCell</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #333;
+      color: white;
+    }
+    td[contenteditable] {
+      background: #fff8dc;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Caderno de Dívidas - SucessoCell</h1>
+
+  <table id="dividasTable">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Valor da Dívida (R$)</th>
+        <th>Valor Pago (R$)</th>
+        <th>Falta Pagar (R$)</th>
+        <th>Excluir</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+
+  <button onclick="adicionarLinha()">Adicionar Dívida</button>
+
+  <script>
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxt_8MZ7bCQkxi2HG-XzV33rCK5q-cHwmpM5_JKp-cgvSmqoc-aWxaYLHF8CQh-hAO8vg/exec";
+    const tabela = document.getElementById("dividasTable").querySelector("tbody");
+
+    async function carregarDados() {
+      try {
+        const response = await fetch(URL_SCRIPT);
+        const dados = await response.json();
+
+        dados.forEach(item => {
+          const linha = criarLinha(item.nome, item.divida, item.pago);
+          tabela.appendChild(linha);
+        });
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      }
+    }
+
+    function criarLinha(nome = "", divida = 0, pago = 0) {
+      const linha = document.createElement("tr");
+
+      const tdNome = document.createElement("td");
+      tdNome.contentEditable = true;
+      tdNome.innerText = nome;
+
+      const tdDivida = document.createElement("td");
+      tdDivida.contentEditable = true;
+      tdDivida.innerText = divida;
+
+      const tdPago = document.createElement("td");
+      tdPago.contentEditable = true;
+      tdPago.innerText = pago;
+
+      const tdFalta = document.createElement("td");
+      tdFalta.innerText = (divida - pago).toFixed(2);
+
+      const tdExcluir = document.createElement("td");
+      const btnExcluir = document.createElement("button");
+      btnExcluir.innerText = "🗑️";
+      btnExcluir.onclick = () => {
+        linha.remove();
+        // Se quiser deletar da planilha também, precisa configurar no Apps Script.
+      };
+      tdExcluir.appendChild(btnExcluir);
+
+      linha.appendChild(tdNome);
+      linha.appendChild(tdDivida);
+      linha.appendChild(tdPago);
+      linha.appendChild(tdFalta);
+      linha.appendChild(tdExcluir);
+
+      linha.addEventListener("input", () => {
+        const divida = parseFloat(tdDivida.innerText) || 0;
+        const pago = parseFloat(tdPago.innerText) || 0;
+        tdFalta.innerText = (divida - pago).toFixed(2);
+
+        salvarNoServidor(tdNome.innerText, divida, pago);
+      });
+
+      return linha;
+    }
+
+    function adicionarLinha() {
+      const novaLinha = criarLinha();
+      tabela.appendChild(novaLinha);
+    }
+
+    function salvarNoServidor(nome, divida, pago) {
+      const url = `${URL_SCRIPT}?nome=${encodeURIComponent(nome)}&divida=${divida}&pago=${pago}`;
+      fetch(url)
+        .then(res => res.text())
+        .then(msg => console.log(msg))
+        .catch(err => console.error("Erro ao salvar:", err));
+    }
+
+    // Carregar dados salvos ao abrir
+    carregarDados();
+  </script>
+
+</body>
+</html>
