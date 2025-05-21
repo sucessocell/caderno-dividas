@@ -6,172 +6,184 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
       padding: 20px;
+      background: #f5f5f5;
     }
+
+    #loginBox {
+      max-width: 300px;
+      margin: 100px auto;
+      background: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+
+    #loginBox input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    #loginBox button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    #app {
+      display: none;
+    }
+
     h1 {
       text-align: center;
-      color: #1a73e8;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #fff;
-      margin-top: 20px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 10px;
       text-align: center;
     }
+
     th {
-      background: #1a73e8;
-      color: #fff;
+      background: #333;
+      color: white;
     }
+
+    td[contenteditable] {
+      background: #fff8dc;
+    }
+
     button {
-      margin: 10px 0;
-      padding: 10px 15px;
-      background: #1a73e8;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    button:hover {
-      background: #1669c1;
-    }
-    #senha-container {
-      text-align: center;
-      margin-top: 50px;
-    }
-    input[type="password"] {
-      padding: 8px;
+      margin-top: 10px;
+      padding: 10px 20px;
       font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
+<div id="loginBox">
+  <h2>Digite a Senha</h2>
+  <input type="password" id="senha" placeholder="Senha">
+  <button onclick="verificarSenha()">Entrar</button>
+  <p id="erro" style="color:red;"></p>
+</div>
+
+<div id="app">
   <h1>Caderno de Dívidas - SucessoCell</h1>
 
-  <div id="senha-container">
-    <p>Digite a senha para editar:</p>
-    <input type="password" id="senha" placeholder="Senha">
-    <button onclick="verificarSenha()">Entrar</button>
-  </div>
+  <table id="dividasTable">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Valor da Dívida (R$)</th>
+        <th>Valor Pago (R$)</th>
+        <th>Falta Pagar (R$)</th>
+        <th>Excluir</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <div id="conteudo" style="display:none;">
-    <table id="tabela">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Serviço</th>
-          <th>Valor</th>
-          <th>Pago</th>
-          <th>Falta</th>
-          <th>Data</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <button onclick="adicionarLinha()">Adicionar Dívida</button>
+</div>
 
-    <button onclick="adicionarLinha()">Adicionar Dívida</button>
-  </div>
+<script>
+  const senhaCorreta = "030102";
 
-  <script>
-    const senhaCorreta = "030102"; // 🔒 MUDE AQUI SUA SENHA
-    let modoEdicao = false;
-    const url = "https://script.google.com/macros/s/AKfycbxt_8MZ7bCQkxi2HG-XzV33rCK5q-cHwmpM5_JKp-cgvSmqoc-aWxaYLHF8CQh-hAO8vg/exec";
-
-    function verificarSenha() {
-      const senha = document.getElementById('senha').value;
-      if (senha === senhaCorreta) {
-        modoEdicao = true;
-        document.getElementById('senha-container').style.display = 'none';
-        document.getElementById('conteudo').style.display = 'block';
-        carregarDados();
-      } else {
-        alert("Senha incorreta! Acesso apenas para visualização.");
-        modoEdicao = false;
-        document.getElementById('senha-container').style.display = 'none';
-        document.getElementById('conteudo').style.display = 'block';
-        carregarDados();
-      }
+  function verificarSenha() {
+    const senha = document.getElementById("senha").value;
+    if (senha === senhaCorreta) {
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      carregarDados();
+    } else {
+      document.getElementById("erro").innerText = "Senha incorreta!";
     }
+  }
 
-    function adicionarLinha(cliente = '', servico = '', valor = '', pago = '', falta = '', data = '') {
-      const tabela = document.querySelector('#tabela tbody');
-      const linha = tabela.insertRow();
-      const campos = [cliente, servico, valor, pago, falta, data];
+  const tabela = document.getElementById("dividasTable").querySelector("tbody");
 
-      for (let i = 0; i < campos.length; i++) {
-        const cell = linha.insertCell();
-        const input = document.createElement('input');
-        input.value = campos[i];
-        input.disabled = !modoEdicao;
-        input.oninput = () => {
-          if ((i === 2 || i === 3) && modoEdicao) atualizarFalta(linha);
-          if (modoEdicao) salvarDados();
-        };
-        cell.appendChild(input);
-      }
-
-      const cellAcoes = linha.insertCell();
-      if (modoEdicao) {
-        const btnExcluir = document.createElement('button');
-        btnExcluir.innerText = 'Excluir';
-        btnExcluir.onclick = () => {
-          linha.remove();
-          salvarDados();
-        };
-        cellAcoes.appendChild(btnExcluir);
-      } else {
-        cellAcoes.innerHTML = '🔒';
-      }
+  function salvarDados() {
+    const dados = [];
+    for (const row of tabela.rows) {
+      const nome = row.cells[0].innerText;
+      const divida = parseFloat(row.cells[1].innerText) || 0;
+      const pago = parseFloat(row.cells[2].innerText) || 0;
+      dados.push({ nome, divida, pago });
     }
+    localStorage.setItem("cadernoDividas", JSON.stringify(dados));
+  }
 
-    function atualizarFalta(linha) {
-      const valor = parseFloat(linha.cells[2].querySelector('input').value) || 0;
-      const pago = parseFloat(linha.cells[3].querySelector('input').value) || 0;
-      const falta = valor - pago;
-      linha.cells[4].querySelector('input').value = falta.toFixed(2);
+  function carregarDados() {
+    const dados = JSON.parse(localStorage.getItem("cadernoDividas")) || [];
+    for (const item of dados) {
+      const linha = criarLinha(item.nome, item.divida, item.pago);
+      tabela.appendChild(linha);
     }
+  }
 
-    function salvarDados() {
-      const linhas = document.querySelectorAll('#tabela tbody tr');
-      const dados = Array.from(linhas).map(linha => {
-        return {
-          cliente: linha.cells[0].querySelector('input').value,
-          servico: linha.cells[1].querySelector('input').value,
-          valor: linha.cells[2].querySelector('input').value,
-          pago: linha.cells[3].querySelector('input').value,
-          falta: linha.cells[4].querySelector('input').value,
-          data: linha.cells[5].querySelector('input').value,
-        };
-      });
+  function criarLinha(nome = "", divida = 0, pago = 0) {
+    const linha = document.createElement("tr");
 
-      fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(dados),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => res.text()).then(msg => {
-        console.log("Salvo:", msg);
-      });
-    }
+    const tdNome = document.createElement("td");
+    tdNome.contentEditable = true;
+    tdNome.innerText = nome;
 
-    function carregarDados() {
-      fetch(url)
-        .then(res => res.json())
-        .then(dados => {
-          dados.forEach(d => {
-            adicionarLinha(d.cliente, d.servico, d.valor, d.pago, d.falta, d.data);
-          });
-        });
-    }
-  </script>
+    const tdDivida = document.createElement("td");
+    tdDivida.contentEditable = true;
+    tdDivida.innerText = divida;
+
+    const tdPago = document.createElement("td");
+    tdPago.contentEditable = true;
+    tdPago.innerText = pago;
+
+    const tdFalta = document.createElement("td");
+    tdFalta.innerText = (divida - pago).toFixed(2);
+
+    const tdExcluir = document.createElement("td");
+    const btnExcluir = document.createElement("button");
+    btnExcluir.innerText = "🗑️";
+    btnExcluir.onclick = () => {
+      linha.remove();
+      salvarDados();
+    };
+    tdExcluir.appendChild(btnExcluir);
+
+    linha.appendChild(tdNome);
+    linha.appendChild(tdDivida);
+    linha.appendChild(tdPago);
+    linha.appendChild(tdFalta);
+    linha.appendChild(tdExcluir);
+
+    linha.addEventListener("input", () => {
+      const divida = parseFloat(tdDivida.innerText) || 0;
+      const pago = parseFloat(tdPago.innerText) || 0;
+      tdFalta.innerText = (divida - pago).toFixed(2);
+      salvarDados();
+    });
+
+    return linha;
+  }
+
+  function adicionarLinha() {
+    const novaLinha = criarLinha();
+    tabela.appendChild(novaLinha);
+    salvarDados();
+  }
+</script>
 
 </body>
 </html>
