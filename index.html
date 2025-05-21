@@ -6,35 +6,47 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f3f3f3;
       padding: 20px;
-      background: #f5f5f5;
     }
     h1 {
       text-align: center;
+      color: #1a73e8;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: #fff;
+      margin-top: 20px;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
     }
     th {
-      background: #333;
-      color: white;
-    }
-    td[contenteditable] {
-      background: #fff8dc;
+      background: #1a73e8;
+      color: #fff;
     }
     button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
+      margin: 10px 0;
+      padding: 10px 15px;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
       cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #1669c1;
+    }
+    #senha-container {
+      text-align: center;
+      margin-top: 50px;
+    }
+    input[type="password"] {
+      padding: 8px;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -42,99 +54,123 @@
 
   <h1>Caderno de Dívidas - SucessoCell</h1>
 
-  <table id="dividasTable">
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>Valor da Dívida (R$)</th>
-        <th>Valor Pago (R$)</th>
-        <th>Falta Pagar (R$)</th>
-        <th>Excluir</th>
-      </tr>
-    </thead>
-    <tbody>
-    </tbody>
-  </table>
+  <div id="senha-container">
+    <p>Digite a senha para editar:</p>
+    <input type="password" id="senha" placeholder="Senha">
+    <button onclick="verificarSenha()">Entrar</button>
+  </div>
 
-  <button onclick="adicionarLinha()">Adicionar Dívida</button>
+  <div id="conteudo" style="display:none;">
+    <table id="tabela">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Serviço</th>
+          <th>Valor</th>
+          <th>Pago</th>
+          <th>Falta</th>
+          <th>Data</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button onclick="adicionarLinha()">Adicionar Dívida</button>
+  </div>
 
   <script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxt_8MZ7bCQkxi2HG-XzV33rCK5q-cHwmpM5_JKp-cgvSmqoc-aWxaYLHF8CQh-hAO8vg/exec";
-    const tabela = document.getElementById("dividasTable").querySelector("tbody");
+    const senhaCorreta = "030102"; // 🔒 MUDE AQUI SUA SENHA
+    let modoEdicao = false;
+    const url = "https://script.google.com/macros/s/AKfycbxt_8MZ7bCQkxi2HG-XzV33rCK5q-cHwmpM5_JKp-cgvSmqoc-aWxaYLHF8CQh-hAO8vg/exec";
 
-    async function carregarDados() {
-      try {
-        const response = await fetch(URL_SCRIPT);
-        const dados = await response.json();
-
-        dados.forEach(item => {
-          const linha = criarLinha(item.nome, item.divida, item.pago);
-          tabela.appendChild(linha);
-        });
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+    function verificarSenha() {
+      const senha = document.getElementById('senha').value;
+      if (senha === senhaCorreta) {
+        modoEdicao = true;
+        document.getElementById('senha-container').style.display = 'none';
+        document.getElementById('conteudo').style.display = 'block';
+        carregarDados();
+      } else {
+        alert("Senha incorreta! Acesso apenas para visualização.");
+        modoEdicao = false;
+        document.getElementById('senha-container').style.display = 'none';
+        document.getElementById('conteudo').style.display = 'block';
+        carregarDados();
       }
     }
 
-    function criarLinha(nome = "", divida = 0, pago = 0) {
-      const linha = document.createElement("tr");
+    function adicionarLinha(cliente = '', servico = '', valor = '', pago = '', falta = '', data = '') {
+      const tabela = document.querySelector('#tabela tbody');
+      const linha = tabela.insertRow();
+      const campos = [cliente, servico, valor, pago, falta, data];
 
-      const tdNome = document.createElement("td");
-      tdNome.contentEditable = true;
-      tdNome.innerText = nome;
+      for (let i = 0; i < campos.length; i++) {
+        const cell = linha.insertCell();
+        const input = document.createElement('input');
+        input.value = campos[i];
+        input.disabled = !modoEdicao;
+        input.oninput = () => {
+          if ((i === 2 || i === 3) && modoEdicao) atualizarFalta(linha);
+          if (modoEdicao) salvarDados();
+        };
+        cell.appendChild(input);
+      }
 
-      const tdDivida = document.createElement("td");
-      tdDivida.contentEditable = true;
-      tdDivida.innerText = divida;
+      const cellAcoes = linha.insertCell();
+      if (modoEdicao) {
+        const btnExcluir = document.createElement('button');
+        btnExcluir.innerText = 'Excluir';
+        btnExcluir.onclick = () => {
+          linha.remove();
+          salvarDados();
+        };
+        cellAcoes.appendChild(btnExcluir);
+      } else {
+        cellAcoes.innerHTML = '🔒';
+      }
+    }
 
-      const tdPago = document.createElement("td");
-      tdPago.contentEditable = true;
-      tdPago.innerText = pago;
+    function atualizarFalta(linha) {
+      const valor = parseFloat(linha.cells[2].querySelector('input').value) || 0;
+      const pago = parseFloat(linha.cells[3].querySelector('input').value) || 0;
+      const falta = valor - pago;
+      linha.cells[4].querySelector('input').value = falta.toFixed(2);
+    }
 
-      const tdFalta = document.createElement("td");
-      tdFalta.innerText = (divida - pago).toFixed(2);
-
-      const tdExcluir = document.createElement("td");
-      const btnExcluir = document.createElement("button");
-      btnExcluir.innerText = "🗑️";
-      btnExcluir.onclick = () => {
-        linha.remove();
-        // Se quiser deletar da planilha também, precisa configurar no Apps Script.
-      };
-      tdExcluir.appendChild(btnExcluir);
-
-      linha.appendChild(tdNome);
-      linha.appendChild(tdDivida);
-      linha.appendChild(tdPago);
-      linha.appendChild(tdFalta);
-      linha.appendChild(tdExcluir);
-
-      linha.addEventListener("input", () => {
-        const divida = parseFloat(tdDivida.innerText) || 0;
-        const pago = parseFloat(tdPago.innerText) || 0;
-        tdFalta.innerText = (divida - pago).toFixed(2);
-
-        salvarNoServidor(tdNome.innerText, divida, pago);
+    function salvarDados() {
+      const linhas = document.querySelectorAll('#tabela tbody tr');
+      const dados = Array.from(linhas).map(linha => {
+        return {
+          cliente: linha.cells[0].querySelector('input').value,
+          servico: linha.cells[1].querySelector('input').value,
+          valor: linha.cells[2].querySelector('input').value,
+          pago: linha.cells[3].querySelector('input').value,
+          falta: linha.cells[4].querySelector('input').value,
+          data: linha.cells[5].querySelector('input').value,
+        };
       });
 
-      return linha;
+      fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(dados),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => res.text()).then(msg => {
+        console.log("Salvo:", msg);
+      });
     }
 
-    function adicionarLinha() {
-      const novaLinha = criarLinha();
-      tabela.appendChild(novaLinha);
-    }
-
-    function salvarNoServidor(nome, divida, pago) {
-      const url = `${URL_SCRIPT}?nome=${encodeURIComponent(nome)}&divida=${divida}&pago=${pago}`;
+    function carregarDados() {
       fetch(url)
-        .then(res => res.text())
-        .then(msg => console.log(msg))
-        .catch(err => console.error("Erro ao salvar:", err));
+        .then(res => res.json())
+        .then(dados => {
+          dados.forEach(d => {
+            adicionarLinha(d.cliente, d.servico, d.valor, d.pago, d.falta, d.data);
+          });
+        });
     }
-
-    // Carregar dados salvos ao abrir
-    carregarDados();
   </script>
 
 </body>
